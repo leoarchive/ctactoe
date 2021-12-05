@@ -19,153 +19,165 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define COLS 3
-#define ROW 3
+typedef struct table Table;
 
-void
-print_table (int8_t **t, size_t row)
+struct table
 {
-  if (!row)
-    return;
+  uint16_t row;
+  uint16_t col;
+  int8_t **v;
+};
 
-  printf ("%ld ", row);
-  for (size_t i = 0; i < COLS; ++i)
-    printf ("%c", *(*t + i) == 0 ? ' ' : (*t)[i] > 0 ? 'X' : 'O');
-
-  puts ("");
-
-  t++, row--;
-
-  print_table (t, row);
+Table *
+create (uint16_t row, uint16_t col)
+{
+  Table *m = (Table *)malloc (sizeof (Table));
+  if (!m)
+    exit (EXIT_FAILURE);
+  m->row = row;
+  m->col = col;
+  m->v = (int8_t **)malloc (row * sizeof (int8_t *));
+  for (size_t i = 0; i < row; ++i)
+    {
+      m->v[i] = (int8_t *)calloc (col, sizeof (int8_t));
+    }
+  return m;
 }
 
 void
-print_an (void)
+output (Table *t)
 {
   char an = 'a';
 
   printf ("  ");
-  for (size_t i = 0; i < COLS; i++, an++)
+  for (size_t i = 0; i < t->col; i++, an++)
     printf ("%c", an);
   puts ("");
+
+  for (size_t i = 0; i < t->row; ++i)
+    {
+      printf ("%d ", t->row - i);
+      for (size_t j = 0; j < t->col; ++j)
+        {
+          printf ("%c", *(*(t->v + i) + j) == 0
+                            ? ' '
+                            : (*(t->v + i))[j] > 0 ? 'X' : 'O');
+        }
+      puts ("");
+    }
 }
 
 uint8_t
-is_win (int8_t **t)
+is_win (Table *t)
 {
-  if (!t)
-    return 0;
   size_t hor = 0, ver = 0, r_diag = 0, l_diag = 0;
+  uint8_t draw = 2;
 
-  _Bool velha = 0;
-
-  for (size_t i = 0; i < ROW; i++)
+  for (size_t i = 0; i < t->row; i++)
     {
-      for (size_t j = 0; j < COLS; j++)
+      for (size_t j = 0; j < t->col; j++)
         {
-          ver += t[i][j];
-          if (j < ROW)
-            hor += t[j][i];
-          if (t[i][j])
-            velha = 1;
+          if (!t->v[i][j])
+            draw = 0;
+          ver += t->v[i][j];
+          if (j < t->row)
+            hor += t->v[j][i];
         }
-      if (ver == COLS || ver == (COLS * -1) || hor == COLS
-          || hor == (COLS * -1))
+      if (ver == t->col || ver == (t->col * -1) || hor == t->col
+          || hor == (t->col * -1))
         return 1;
       ver = hor = 0;
     }
 
-  if (!velha)
-    return 2;
+  for (size_t i = 0; i < t->row; i++)
+    r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
 
-  for (size_t i = 0; i < ROW; i++)
-    r_diag += t[i][i], l_diag += t[i][ROW - i];
-
-  return r_diag == ROW || r_diag == (ROW * -1) || l_diag == ROW
-         || l_diag == (ROW * -1);
+  if (r_diag == t->row || r_diag == (t->row * -1) || l_diag == t->row
+      || l_diag == (t->row * -1))
+    return 1;
+  return draw;
 }
 
-int8_t **
-set_move (_Bool p, int8_t **t, char *i)
+Table *
+move (_Bool p, Table *t, char *i)
 {
   int16_t col = 0, row = i[1] - '0';
 
   char a = 'a';
 
-  row -= ROW;
+  row -= t->row;
   row *= -1;
   if (row < 0)
     row = 0;
 
-  for (; col < COLS; col++, a++)
+  for (; col < t->col; col++, a++)
     if (i[0] == a)
       break;
 
-  if (t[row][col])
+  if (t->v[row][col])
     {
       fprintf (stderr, "invalid position\n");
-      return NULL;
+      return t;
     }
 
-  t[row][col] = p ? 1 : -1;
+  t->v[row][col] = p ? 1 : -1;
   return t;
 }
 
-int8_t **
-reset (int8_t **t)
+Table *
+reset (Table *t)
 {
-  for (size_t i = 0; i < ROW; i++)
-    for (size_t j = 0; j < COLS; j++)
-      t[i][j] = 0;
+  for (size_t i = 0; i < t->row; i++)
+    for (size_t j = 0; j < t->col; j++)
+      t->v[i][j] = 0;
   return t;
 }
 
 int
 main (void)
 {
-  int8_t **table, **auxtable;
+  Table *t, *auxt;
   uint8_t win = 0;
-
-  int x_score = 0, o_score = 0;
-
+  uint16_t x_score = 0, o_score = 0;
   _Bool player = 1;
   char input[3];
 
-  table = (int8_t **)malloc (ROW * sizeof (int8_t *));
-  for (size_t i = 0; i < ROW; i++)
-    table[i] = (int8_t *)calloc (COLS, sizeof (int8_t));
+  t = create (3, 3);
 
   while (1)
     {
-      print_an ();
-      print_table (table, ROW);
+      output (t);
 
-      printf ("%c player: ", player ? 'X' : 'O');
+      printf ("Player %c: ", player ? 'X' : 'O');
       scanf ("%2s[a-z0-9]", input);
 
-      auxtable = set_move (player, table, input);
-      win = is_win (auxtable);
+      auxt = move (player, t, input);
+      if (!auxt)
+        continue;
+      t = auxt;
+
+      win = is_win (t);
       if (win)
         {
           if (win == 2)
             {
-              printf ("DRAW! X %d vs %d O\n", x_score, o_score);
+              printf ("DRAW! - X: %d | O: %d\n", x_score, o_score);
             }
           else
             {
               player ? x_score++ : o_score++;
-              printf ("%c WIN! X %d vs %d O\n", player ? 'X' : 'O', x_score,
+              printf ("%c WIN! - X: %d | O: %d\n", player ? 'X' : 'O', x_score,
                       o_score);
             }
-          table = reset (table);
+          t = reset (t);
           player = 1;
         }
       else
         {
-          table = auxtable, player = !player;
+          player = !player;
         }
     }
 
-  free (table);
+  free (t);
   return 0;
 }
