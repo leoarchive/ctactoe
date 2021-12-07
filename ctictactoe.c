@@ -117,7 +117,7 @@ move (_Bool p, Table *t, char *i)
   if (t->v[row][col])
     {
       fprintf (stderr, "invalid position\n");
-      return t;
+      return NULL;
     }
 
   t->v[row][col] = p ? 1 : -1;
