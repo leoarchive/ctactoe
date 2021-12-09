@@ -75,11 +75,12 @@ is_win (Table *t)
 
   for (size_t i = 0; i < t->row; i++)
     {
+      r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
       for (size_t j = 0; j < t->col; j++)
         {
+          ver += t->v[i][j];
           if (!t->v[i][j])
             draw = 0;
-          ver += t->v[i][j];
           if (j < t->row)
             hor += t->v[j][i];
         }
@@ -89,12 +90,10 @@ is_win (Table *t)
       ver = hor = 0;
     }
 
-  for (size_t i = 0; i < t->row; i++)
-    r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
-
   if (r_diag == t->row || r_diag == (t->row * -1) || l_diag == t->row
       || l_diag == (t->row * -1))
     return 1;
+
   return draw;
 }
 
@@ -103,13 +102,12 @@ move (_Bool p, Table *t, char *i)
 {
   int16_t col = 0, row = i[1] - '0';
 
-  char a = 'a';
-
   row -= t->row;
   row *= -1;
   if (row < 0)
     row = 0;
 
+  char a = 'a';
   for (; col < t->col; col++, a++)
     if (i[0] == a)
       break;
