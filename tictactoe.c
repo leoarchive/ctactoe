@@ -1,5 +1,5 @@
 /*
- *  C Tic Tac Toe
+ *  Tic Tac Toe
  *  Copyright (c) 2021 Leonardo Zamboni
  *
  *  this program is free software: you can redistribute it and/or modify
