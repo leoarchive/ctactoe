@@ -1,4 +1,4 @@
-TARGET=ctictactoe
+TARGET=tictactoe
 LIBS=
 CC=gcc
 CFLAGS= -pedantic -Wall -std=c99

@@ -23,159 +23,161 @@ typedef struct table Table;
 
 struct table
 {
-  uint16_t row;
-  uint16_t col;
-  int8_t **v;
+    uint16_t row;
+    uint16_t col;
+    int8_t **v;
 };
 
 Table *
 create (uint16_t row, uint16_t col)
 {
-  Table *m = (Table *)malloc (sizeof (Table));
-  if (!m)
-    exit (EXIT_FAILURE);
-  m->row = row;
-  m->col = col;
-  m->v = (int8_t **)malloc (row * sizeof (int8_t *));
-  for (size_t i = 0; i < row; ++i)
-    {
-      m->v[i] = (int8_t *)calloc (col, sizeof (int8_t));
-    }
-  return m;
+    Table *m = (Table *)malloc (sizeof (Table));
+    if (!m)
+        exit (EXIT_FAILURE);
+    m->row = row;
+    m->col = col;
+    m->v = (int8_t **)malloc (row * sizeof (int8_t *));
+    for (size_t i = 0; i < row; ++i)
+        {
+            m->v[i] = (int8_t *)calloc (col, sizeof (int8_t));
+        }
+    return m;
 }
 
 void
 output (Table *t)
 {
-  char an = 'a';
+    char an = 'a';
 
-  printf ("  ");
-  for (size_t i = 0; i < t->col; i++, an++)
-    printf ("%c", an);
-  puts ("");
+    printf ("  ");
+    for (size_t i = 0; i < t->col; i++, an++)
+        printf ("%c", an);
+    puts ("");
 
-  for (size_t i = 0; i < t->row; ++i)
-    {
-      printf ("%d ", t->row - i);
-      for (size_t j = 0; j < t->col; ++j)
+    for (size_t i = 0; i < t->row; ++i)
         {
-          printf ("%c", *(*(t->v + i) + j) == 0
+            printf ("%ld ", t->row - i);
+            for (size_t j = 0; j < t->col; ++j)
+                {
+                    printf ("%c", *(*(t->v + i) + j) == 0
                             ? ' '
                             : (*(t->v + i))[j] > 0 ? 'X' : 'O');
+                }
+            puts ("");
         }
-      puts ("");
-    }
 }
 
 uint8_t
 is_win (Table *t)
 {
-  size_t hor = 0, ver = 0, r_diag = 0, l_diag = 0;
-  uint8_t draw = 2;
+    size_t hor = 0, ver = 0, r_diag = 0, l_diag = 0;
+    uint8_t draw = 2;
 
-  for (size_t i = 0; i < t->row; i++)
-    {
-      r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
-      for (size_t j = 0; j < t->col; j++)
+    for (size_t i = 0; i < t->row; i++)
         {
-          ver += t->v[i][j];
-          if (!t->v[i][j])
-            draw = 0;
-          if (j < t->row)
-            hor += t->v[j][i];
+            r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
+            for (size_t j = 0; j < t->col; j++)
+                {
+                    ver += t->v[i][j];
+                    if (!t->v[i][j])
+                        draw = 0;
+                    if (j < t->row)
+                        hor += t->v[j][i];
+                }
+            if (ver == t->col || ver == (t->col * -1) || hor == t->col
+                    || hor == (t->col * -1))
+                return 1;
+            ver = hor = 0;
         }
-      if (ver == t->col || ver == (t->col * -1) || hor == t->col
-          || hor == (t->col * -1))
+
+    if (r_diag == t->row || r_diag == (t->row * -1) || l_diag == t->row
+            || l_diag == (t->row * -1))
         return 1;
-      ver = hor = 0;
-    }
 
-  if (r_diag == t->row || r_diag == (t->row * -1) || l_diag == t->row
-      || l_diag == (t->row * -1))
-    return 1;
-
-  return draw;
+    return draw;
 }
 
 Table *
-move (_Bool p, Table *t, char *i)
+move (_Bool p, Table *t, char x, size_t y)
 {
-  int16_t col = 0, row = i[1] - '0';
+    size_t col = 0, row = y;
 
-  row -= t->row;
-  row *= -1;
-  if (row < 0)
-    row = 0;
+    row -= t->row;
+    row *= -1;
+    if (row < 0)
+        row = 0;
 
-  char a = 'a';
-  for (; col < t->col; col++, a++)
-    if (i[0] == a)
-      break;
+    char a = 'a';
+    for (; col < t->col; col++, a++)
+        if (x == a)
+            break;
 
-  if (t->v[row][col])
-    {
-      fprintf (stderr, "invalid position\n");
-      return NULL;
-    }
+    if (row > t->row || col > t->col || t->v[row][col])
+        {
+            fprintf (stderr, "invalid position\n");
+            return NULL;
+        }
 
-  t->v[row][col] = p ? 1 : -1;
-  return t;
+    t->v[row][col] = p ? 1 : -1;
+    return t;
 }
 
 Table *
 reset (Table *t)
 {
-  for (size_t i = 0; i < t->row; i++)
-    for (size_t j = 0; j < t->col; j++)
-      t->v[i][j] = 0;
-  return t;
+    for (size_t i = 0; i < t->row; i++)
+        for (size_t j = 0; j < t->col; j++)
+            t->v[i][j] = 0;
+    return t;
 }
 
 int
 main (void)
 {
-  Table *t, *auxt;
-  uint8_t win = 0;
-  uint16_t x_score = 0, o_score = 0;
-  _Bool player = 1;
-  char input[3];
+    Table *t, *auxt;
+    uint8_t win = 0;
+    uint16_t x_score = 0, o_score = 0;
+    _Bool player = 1;
+    char x;
+    size_t y;
 
-  t = create (3, 3);
+    t = create (3, 3);
 
-  while (1)
-    {
-      output (t);
-
-      printf ("Player %c: ", player ? 'X' : 'O');
-      scanf ("%2s[a-z0-9]", input);
-
-      auxt = move (player, t, input);
-      if (!auxt)
-        continue;
-      t = auxt;
-
-      win = is_win (t);
-      if (win)
+    while (1)
         {
-          if (win == 2)
-            {
-              printf ("DRAW! - X: %d | O: %d\n", x_score, o_score);
-            }
-          else
-            {
-              player ? x_score++ : o_score++;
-              printf ("%c WIN! - X: %d | O: %d\n", player ? 'X' : 'O', x_score,
-                      o_score);
-            }
-          t = reset (t);
-          player = 1;
-        }
-      else
-        {
-          player = !player;
-        }
-    }
+            output (t);
 
-  free (t);
-  return 0;
+            printf ("Player %c: ", player ? 'X' : 'O');
+            scanf("%c%zu", &x, &y);
+            getchar(); // remove \n from buffer
+
+            auxt = move (player, t, x, y);
+            if (!auxt)
+                continue;
+            t = auxt;
+
+            win = is_win (t);
+            if (win)
+                {
+                    if (win == 2)
+                        {
+                            printf ("DRAW! - X: %d | O: %d\n", x_score, o_score);
+                        }
+                    else
+                        {
+                            player ? x_score++ : o_score++;
+                            printf ("%c WIN! - X: %d | O: %d\n", player ? 'X' : 'O', x_score,
+                                    o_score);
+                        }
+                    t = reset (t);
+                    player = 1;
+                }
+            else
+                {
+                    player = !player;
+                }
+        }
+
+    free (t);
+    return 0;
 }
