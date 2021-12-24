@@ -50,7 +50,7 @@ output (Table *t)
     char an = 'a';
 
     printf ("  ");
-    for (size_t i = 0; i < t->col; i++, an++)
+    for (size_t i = 0; i < t->col; ++i, ++an)
         printf ("%c", an);
     puts ("");
 
@@ -73,10 +73,10 @@ is_win (Table *t)
     size_t hor = 0, ver = 0, r_diag = 0, l_diag = 0;
     uint8_t draw = 2;
 
-    for (size_t i = 0; i < t->row; i++)
+    for (size_t i = 0; i < t->row; ++i)
         {
             r_diag += t->v[i][i], l_diag += t->v[i][(t->row - 1) - i];
-            for (size_t j = 0; j < t->col; j++)
+            for (size_t j = 0; j < t->col; ++j)
                 {
                     ver += t->v[i][j];
                     if (!t->v[i][j])
@@ -108,7 +108,7 @@ move (_Bool p, Table *t, char x, size_t y)
         row = 0;
 
     char a = 'a';
-    for (; col < t->col; col++, a++)
+    for (; col < t->col; ++col, ++a)
         if (x == a)
             break;
 
@@ -125,10 +125,19 @@ move (_Bool p, Table *t, char x, size_t y)
 Table *
 reset (Table *t)
 {
-    for (size_t i = 0; i < t->row; i++)
-        for (size_t j = 0; j < t->col; j++)
+    for (size_t i = 0; i < t->row; ++i)
+        for (size_t j = 0; j < t->col; ++j)
             t->v[i][j] = 0;
     return t;
+}
+
+Table *
+free_table (Table *t)
+{
+    for (size_t i = 0; i < t->row; ++i)
+        free (t->v[i]);
+    free(t);
+    return NULL;
 }
 
 int
@@ -178,6 +187,6 @@ main (void)
                 }
         }
 
-    free (t);
+    t = free_table(t);
     return 0;
 }
