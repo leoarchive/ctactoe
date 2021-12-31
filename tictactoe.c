@@ -15,37 +15,48 @@
  *  you should have received a copy of the gnu general public license
  *  along with this program.  if not, see <http://www.gnu.org/licenses/>.
  */
-#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
-typedef struct table Table;
+typedef struct ticTacToe TicTacToe;
 
-struct table
+struct ticTacToe
 {
-    uint16_t row;
-    uint16_t col;
     int8_t **v;
+    size_t row;
+    size_t col;
+    size_t scoreX;
+    size_t scoreO;
+    char x;
+    size_t y;
+    _Bool p;
+    char win;
 };
 
-Table *
-create (uint16_t row, uint16_t col)
+TicTacToe *
+create (size_t row, size_t col)
 {
-    Table *m = (Table *)malloc (sizeof (Table));
-    if (!m)
-        exit (EXIT_FAILURE);
+    TicTacToe *m = malloc (sizeof (TicTacToe));
+    if (!m) exit (EXIT_FAILURE);
     m->row = row;
     m->col = col;
-    m->v = (int8_t **)malloc (row * sizeof (int8_t *));
+    m->win = 0;
+    m->p = 0;
+    m->x = 0;
+    m->y = 0;
+    m->scoreX = 0;
+    m->scoreO = 0;
+    m->v = malloc (row * sizeof (int8_t *));
     for (size_t i = 0; i < row; ++i)
         {
-            m->v[i] = (int8_t *)calloc (col, sizeof (int8_t));
+            m->v[i] = calloc (col, sizeof (int8_t));
         }
     return m;
 }
 
 void
-output (Table *t)
+print (TicTacToe *t)
 {
     char an = 'a';
 
@@ -61,17 +72,17 @@ output (Table *t)
                 {
                     printf ("%c", *(*(t->v + i) + j) == 0
                             ? ' '
-                            : (*(t->v + i))[j] > 0 ? 'X' : 'O');
+                            : *(*(t->v + i) + j) > 0 ? 'X' : 'O');
                 }
             puts ("");
         }
 }
 
-uint8_t
-is_win (Table *t)
+char
+is_win (TicTacToe *t)
 {
     size_t hor = 0, ver = 0, r_diag = 0, l_diag = 0;
-    uint8_t draw = 2;
+    char draw = 2;
 
     for (size_t i = 0; i < t->row; ++i)
         {
@@ -97,10 +108,10 @@ is_win (Table *t)
     return draw;
 }
 
-Table *
-move (_Bool p, Table *t, char x, size_t y)
+TicTacToe *
+move (TicTacToe *t)
 {
-    size_t col = 0, row = y;
+    size_t col = 0, row = t->y;
 
     row -= t->row;
     row *= -1;
@@ -109,7 +120,7 @@ move (_Bool p, Table *t, char x, size_t y)
 
     char a = 'a';
     for (; col < t->col; ++col, ++a)
-        if (x == a)
+        if (t->x == a)
             break;
 
     if (row > t->row || col > t->col || t->v[row][col])
@@ -118,21 +129,20 @@ move (_Bool p, Table *t, char x, size_t y)
             return NULL;
         }
 
-    t->v[row][col] = p ? 1 : -1;
+    *(*(t->v + row) + col) = t->p ? 1 : -1;
     return t;
 }
 
-Table *
-reset (Table *t)
+void
+reset (TicTacToe **t)
 {
-    for (size_t i = 0; i < t->row; ++i)
-        for (size_t j = 0; j < t->col; ++j)
-            t->v[i][j] = 0;
-    return t;
+    for (size_t i = 0; i < (*t)->row; ++i)
+        for (size_t j = 0; j < (*t)->col; ++j)
+            *(*((*t)->v + i) + j) = 0;
 }
 
-Table *
-free_table (Table *t)
+TicTacToe *
+free_ttt (TicTacToe *t)
 {
     for (size_t i = 0; i < t->row; ++i)
         free (t->v[i]);
@@ -143,50 +153,44 @@ free_table (Table *t)
 int
 main (void)
 {
-    Table *t, *auxt;
-    uint8_t win = 0;
-    uint16_t x_score = 0, o_score = 0;
-    _Bool player = 1;
-    char x;
-    size_t y;
-
+    TicTacToe *t, *auxt;
     t = create (3, 3);
 
     while (1)
         {
-            output (t);
+            print (t);
 
-            printf ("Player %c: ", player ? 'X' : 'O');
-            scanf("%c%zu", &x, &y);
+            printf ("Player %c: ", t->p ? 'X' : 'O');
+            scanf("%c%zu", &t->x, &t->y);
             getchar(); // remove \n from buffer
 
-            auxt = move (player, t, x, y);
+            auxt = move (t);
             if (!auxt)
                 continue;
             t = auxt;
 
-            win = is_win (t);
-            if (win)
+            t->win = is_win (t);
+            if (t->win)
                 {
-                    if (win == 2)
+                    if (t->win == 2)
                         {
-                            printf ("DRAW! - X: %d | O: %d\n", x_score, o_score);
+                            printf ("DRAW! - X: %zu | O: %zu\n", t->scoreX, t->scoreO);
                         }
                     else
                         {
-                            player ? x_score++ : o_score++;
-                            printf ("%c WIN! - X: %d | O: %d\n", player ? 'X' : 'O', x_score,
-                                    o_score);
+                            t->p ? t->scoreX++ : t->scoreO++;
+                            printf ("%c WIN! - X: %zu | O: %zu\n", t->p ? 'X' : 'O', t->scoreX,
+                                    t->scoreO);
                         }
-                    t = reset (t);
-                    player = 1;
+                    reset (&t);
+                    t->p = 1;
                 }
             else
                 {
-                    player = !player;
+                    t->p = !t->p;
                 }
         }
 
-    t = free_table(t);
+    t = free_ttt (t);
     return 0;
 }
